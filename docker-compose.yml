@@ -1,0 +1,48 @@
+services:
+  traefik:
+    image: traefik:v3.3
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      - "--api.insecure=false"
+      - "--providers.file.filename=/etc/traefik/dynamic.yml"
+      - "--providers.file.watch=true"
+      - "--entrypoints.web.address=:7100"
+      - "--log.level=INFO"
+    ports:
+      - "${EXPOSE_PORT:-7100}:7100"
+    volumes:
+      - "./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro"
+    networks:
+      - pdf-net
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: pdf-service
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      - GOTENBERG_CHROMIUM_MAX_QUEUE_SIZE=10
+      - GOTENBERG_CHROMIUM_RESTART_AFTER=50
+      - GOTENBERG_CHROMIUM_AUTO_START=true
+      - GOTENBERG_LIBREOFFICE_AUTO_START=true
+      - GOTENBERG_LIBREOFFICE_RESTART_AFTER=10
+      - GOTENBERG_API_TIMEOUT=30s
+      - API_ENABLE_BASIC_AUTH=true
+      - GOTENBERG_API_BASIC_AUTH_USERNAME=${GOTENBERG_USER}
+      - GOTENBERG_API_BASIC_AUTH_PASSWORD=${GOTENBERG_PASS}
+      - GOTENBERG_LOG_LEVEL=info
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+        reservations:
+          memory: 512M
+    networks:
+      - pdf-net
+
+networks:
+  pdf-net:
+    driver: bridge
