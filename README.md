@@ -55,11 +55,10 @@ GOTENBERG_PASS=your_strong_password
 docker compose up -d
 ```
 
-### 3. Cek Status (dari dalam container)
+### 3. Cek Status
 
 ```bash
-docker compose exec gotenberg \
-  curl -u admin:your_password http://localhost:3000/health
+curl http://localhost:7100/health
 ```
 
 Response sukses:
@@ -75,41 +74,34 @@ Cek **hanya status HTTP** (tanpa menyimpan body) pakai `-w "%{http_code}"`:
 
 ### Basic auth aktif
 
-Tanpa `-u` → harus **`401`**:
+Catatan: endpoint `/health` bersifat publik untuk healthcheck, jadi bisa tetap **`200`** tanpa auth.
+
+Validasi auth harus pakai endpoint `/forms/*`.
+
+Tanpa `-u` pada endpoint konversi → harus **`401`**:
 
 ```bash
-docker compose exec gotenberg \
-  curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/health
+curl -s -o /dev/null -w "%{http_code}\n" \
+  -X POST http://localhost:7100/forms/chromium/convert/url \
+  -F "url=https://google.com"
 ```
 
-Dengan kredensial dari `.env` → harus **`200`**:
+Dengan kredensial dari `.env` pada endpoint konversi → harus **`200`** jika konversi berhasil:
 
 ```bash
-docker compose exec gotenberg \
-  curl -s -o /dev/null -w "%{http_code}\n" \
-    -u admin:your_password \
-    http://localhost:3000/health
+curl -s -o /dev/null -w "%{http_code}\n" \
+  -u admin:your_password \
+  -X POST http://localhost:7100/forms/chromium/convert/url \
+  -F "url=https://google.com"
 ```
 
 ### POST URL → PDF
 
-Tanpa auth → **`401`**:
-
 ```bash
-docker compose exec gotenberg \
-  curl -s -o /dev/null -w "%{http_code}\n" \
-    -X POST http://localhost:3000/forms/chromium/convert/url \
-    -F "url=https://example.com"
-```
-
-Dengan auth → **`200`** jika konversi berhasil (bisa **`4xx`** kalau situs / Chromium menolak):
-
-```bash
-docker compose exec gotenberg \
-  curl -s -o /dev/null -w "%{http_code}\n" \
-    -u admin:your_password \
-    -X POST http://localhost:3000/forms/chromium/convert/url \
-    -F "url=https://example.com"
+curl -u admin:your_password \
+  -X POST http://localhost:7100/forms/chromium/convert/url \
+  -F "url=https://google.com" \
+  -o output.pdf
 ```
 
 Kalau pakai `-o output.pdf` **tanpa** `-u` tapi file hasilnya nyaris kosong (cuma puluhan byte), itu biasanya body error (mis. JSON), bukan PDF — tambahkan `-u admin:your_password`.
@@ -121,46 +113,44 @@ Kalau pakai `-o output.pdf` **tanpa** `-u` tapi file hasilnya nyaris kosong (cum
 ### Health Check
 
 ```bash
-docker compose exec gotenberg \
-  curl -u admin:password http://localhost:3000/health
+curl -u admin:password http://localhost:7100/health
 ```
 
 ### HTML → PDF
 
 ```bash
-docker compose exec gotenberg sh -lc 'curl -u admin:password \
-  -X POST http://localhost:3000/forms/chromium/convert/html \
-  -F "files=@/tmp/index.html" \
-  -o /tmp/output.pdf'
+curl -u admin:password \
+  -X POST http://localhost:7100/forms/chromium/convert/html \
+  -F "files=@index.html" \
+  -o output.pdf
 ```
 
 ### URL → PDF
 
 ```bash
-docker compose exec gotenberg \
-  curl -u admin:password \
-    -X POST http://localhost:3000/forms/chromium/convert/url \
-    -F "url=https://example.com" \
-    -o /tmp/output.pdf
+curl -u admin:password \
+  -X POST http://localhost:7100/forms/chromium/convert/url \
+  -F "url=https://google.com" \
+  -o output.pdf
 ```
 
 ### Merge PDF
 
 ```bash
-docker compose exec gotenberg sh -lc 'curl -u admin:password \
-  -X POST http://localhost:3000/forms/pdfengines/merge \
-  -F "files=@/tmp/file1.pdf" \
-  -F "files=@/tmp/file2.pdf" \
-  -o /tmp/merged.pdf'
+curl -u admin:password \
+  -X POST http://localhost:7100/forms/pdfengines/merge \
+  -F "files=@file1.pdf" \
+  -F "files=@file2.pdf" \
+  -o merged.pdf
 ```
 
 ### Image → PDF
 
 ```bash
-docker compose exec gotenberg sh -lc 'curl -u admin:password \
-  -X POST http://localhost:3000/forms/chromium/convert/html \
-  -F "files=@/tmp/index.html" \
-  -o /tmp/output.pdf'
+curl -u admin:password \
+  -X POST http://localhost:7100/forms/chromium/convert/html \
+  -F "files=@index.html" \
+  -o output.pdf
 ```
 
 > Wrap gambar dalam HTML sederhana, lalu convert via Chromium.
@@ -170,7 +160,7 @@ docker compose exec gotenberg sh -lc 'curl -u admin:password \
 ## Konfigurasi
 
 Basic auth API aktif dari `docker-compose.yml` dengan:
-- `GOTENBERG_API_ENABLE_BASIC_AUTH=true`
+- `API_ENABLE_BASIC_AUTH=true`
 - `GOTENBERG_API_BASIC_AUTH_USERNAME=${GOTENBERG_USER}`
 - `GOTENBERG_API_BASIC_AUTH_PASSWORD=${GOTENBERG_PASS}`
 
@@ -192,7 +182,7 @@ Basic auth API aktif dari `docker-compose.yml` dengan:
 1. Ganti `GOTENBERG_USER` / `GOTENBERG_PASS` default sebelum deploy
 2. Simpan `.env` di secret manager, jangan commit ke git
 3. Tambahkan `.env` ke `.gitignore`
-4. Untuk akses dari host, publish port `3000` di service `gotenberg` bila diperlukan
+4. Pastikan mapping port `7100:3000` aktif di `docker-compose.yml`
 5. Tambahkan reverse proxy/WAF hanya jika butuh rate limit atau proteksi edge
 
 ---
