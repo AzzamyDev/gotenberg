@@ -23,9 +23,3 @@ services:
           cpus: "1.0"
         reservations:
           memory: 512M
-    networks:
-      - pdf-net
-
-networks:
-  pdf-net:
-    driver: bridge
