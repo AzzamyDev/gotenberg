@@ -1,22 +1,4 @@
 services:
-  traefik:
-    image: traefik:v3.3
-    container_name: traefik
-    restart: unless-stopped
-    command:
-      - "--api.insecure=false"
-      - "--providers.file.filename=/etc/traefik/dynamic.yml"
-      - "--providers.file.watch=true"
-      - "--entrypoints.web.address=:7100"
-      - "--log.level=INFO"
-      - "--accesslog=true"
-    ports:
-      - "${EXPOSE_PORT:-7100}:7100"
-    volumes:
-      - "./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro"
-    networks:
-      - pdf-net
-
   gotenberg:
     image: gotenberg/gotenberg:8
     container_name: pdf-service
@@ -47,6 +29,3 @@ services:
 networks:
   pdf-net:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.50.0.0/24
