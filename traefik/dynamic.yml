@@ -19,7 +19,7 @@ http:
       rateLimit:
         average: 10
         burst: 20
-        period: 1s
+        period: "1s"
         sourceCriterion:
           ipStrategy:
             depth: 1
