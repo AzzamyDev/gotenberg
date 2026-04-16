@@ -4,6 +4,8 @@ services:
     container_name: pdf-service
     restart: unless-stopped
     network_mode: bridge
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${EXPOSE_PORT:-7100}:3000"
     environment:
